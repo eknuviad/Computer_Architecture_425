@@ -1,0 +1,7 @@
+Group10_FSM.qpf
+comments_fsm.qsf
+db/
+fsm.vhd.bak
+fsm_tb.vhd.bak
+vsim.wlf
+work/

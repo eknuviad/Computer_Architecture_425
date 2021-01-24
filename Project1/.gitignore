@@ -5,3 +5,7 @@ fsm.vhd.bak
 fsm_tb.vhd.bak
 vsim.wlf
 work/
+c5_pin_model_dump.txt
+incremental_db/
+output_files/
+simulation/

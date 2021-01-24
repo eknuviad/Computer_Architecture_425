@@ -61,12 +61,9 @@ begin
 				elsif(input = STAR_CHARACTER) then
 					output <= '0';
 					state <= S4;
-				elsif(input = NEW_LINE_CHARACTER) then
-					output <= '0';
-					state <= S0;
 				else
 					output <= '0';
-					state <= S1;
+					state <= S0;
 				end if;
 					
 			when S3 =>

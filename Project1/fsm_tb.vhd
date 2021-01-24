@@ -45,6 +45,191 @@ BEGIN
 	ASSERT (s_output = '0') REPORT "When reading a meaningless character, the output should be '0'" SEVERITY ERROR;
 	REPORT "_______________________";
     
+	s_reset <= '1';
+	WAIT FOR 1 * clk_period;
+	s_reset <= '0';
+	WAIT FOR 1 * clk_period;
+	
+	REPORT "Testing comment : //basic\n";
+	s_input <= SLASH_CHARACTER;
+	WAIT FOR 1 * clk_period;
+	ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+	
+	s_input <= SLASH_CHARACTER;
+	WAIT FOR 1 * clk_period;
+	ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+	
+	s_input <= "01100010";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+  s_input <= "01100001";
+  WAIT FOR 1 * clk_period;
+  ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+  s_input <= "01110011";
+  WAIT FOR 1 * clk_period;
+  ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+  s_input <= "01101001";
+  WAIT FOR 1 * clk_period;
+  ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+  s_input <= "01100011";
+  WAIT FOR 1 * clk_period;
+  ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+  s_input <= NEW_LINE_CHARACTER;
+  WAIT FOR 1 * clk_period;
+  ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  REPORT "__________________";
+	
+	s_reset <= '1';
+	WAIT FOR 1 * clk_period;
+	s_reset <= '0';
+	WAIT FOR 1 * clk_period;
+
+
+
+		
+	REPORT "Testing comment : /*basic\n";
+	s_input <= SLASH_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+  
+    s_input <= STAR_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+  
+    s_input <= "01100010";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+    s_input <= "01100001";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+    s_input <= "01110011";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+    s_input <= "01101001";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+    s_input <= "01100011";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+    s_input <= NEW_LINE_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+	REPORT "_______________________";
+	
+
+
+
+
+	s_reset <= '1';
+	WAIT FOR 1 * clk_period;
+	s_reset <= '0';
+	WAIT FOR 1 * clk_period;
+	
+	
+	REPORT "Testing comment : *//*code" ; 
+    s_input <= STAR_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+  
+    s_input <= SLASH_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+
+	s_input <= SLASH_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+
+	s_input <= STAR_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+
+	s_input <= "01100011";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+
+	s_input <= "01101111";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+
+	s_input <= "01100100";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+	
+	s_input <= "01100101";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+	REPORT "_______________________";
+	
+	s_reset <= '1';
+	WAIT FOR 1 * clk_period;
+	s_reset <= '0';
+	WAIT FOR 1 * clk_period;
+	
+
+	REPORT "Testing comment : /*code\ncode*/";
+	s_input <= SLASH_CHARACTER;
+	WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+  
+	s_input <= STAR_CHARACTER;
+	WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+    
+	s_input <= "01100011";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= "01101111";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= "01100100";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+	
+	s_input <= "01100101";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= NEW_LINE_CHARACTER;
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= "01100011";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= "01101111";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= "01100100";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+	
+	s_input <= "01100101";
+    WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  
+	s_input <= STAR_CHARACTER;
+	WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+
+	s_input <= SLASH_CHARACTER;
+	WAIT FOR 1 * clk_period;
+    ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
+  REPORT "_______________________";
+	
 	WAIT;
 END PROCESS stim_process;
 END;

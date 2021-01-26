@@ -201,7 +201,7 @@ BEGIN
 
 	s_input <= STAR_CHARACTER;
     WAIT FOR 1 * clk_period;
-    ASSERT (s_output = '0') REPORT "Output should be '0'" SEVERITY ERROR;
+    ASSERT (s_output = '1') REPORT "Output should be '0'" SEVERITY ERROR;
 
 	s_input <= "01100011";
     WAIT FOR 1 * clk_period;

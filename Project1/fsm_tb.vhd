@@ -44,7 +44,7 @@ BEGIN
 	WAIT FOR 1 * clk_period;
 	ASSERT (s_output = '0') REPORT "When reading a meaningless character, the output should be '0'" SEVERITY ERROR;
 	REPORT "_______________________";
-    
+--    
 	s_reset <= '1';
 	WAIT FOR 1 * clk_period;
 	s_reset <= '0';
@@ -184,8 +184,9 @@ BEGIN
 	WAIT FOR 1 * clk_period;
     ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
     REPORT "_______________________";
-	
--- Test 4
+	 	 
+--	
+---- Test 4
 	REPORT "Test 4: *//*code" ; 
     s_input <= STAR_CHARACTER;
     WAIT FOR 1 * clk_period;
@@ -224,8 +225,8 @@ BEGIN
 	WAIT FOR 1 * clk_period;
 	s_reset <= '0';
     WAIT FOR 1 * clk_period;
-    
--- Test 5
+--    
+---- Test 5
     REPORT "Test 5: /a//code" ; 
     s_input <= SLASH_CHARACTER;
     WAIT FOR 1 * clk_period;
@@ -258,14 +259,14 @@ BEGIN
 	s_input <= "01100101";
     WAIT FOR 1 * clk_period;
     ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
-	REPORT "_______________________";
+--	REPORT "_______________________";
 	
 	s_reset <= '1';
 	WAIT FOR 1 * clk_period;
 	s_reset <= '0';
     WAIT FOR 1 * clk_period;
-
--- Test 6
+--
+---- Test 6
     REPORT "Test 6: /a/*code*/"; 
     s_input <= SLASH_CHARACTER;
     WAIT FOR 1 * clk_period;
@@ -307,7 +308,7 @@ BEGIN
     WAIT FOR 1 * clk_period;
     ASSERT (s_output = '1') REPORT "Output should be '1'" SEVERITY ERROR;
 	REPORT "_______________________";
-	
+--	
 	WAIT;
 END PROCESS stim_process;
 END;

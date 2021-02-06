@@ -1,0 +1,7 @@
+1. basic pattern:           "//basic"         -> 0011..1     Test 1
+                            "/*basic"         -> 0011..1     Test 2
+   (covered in report):     "/*code\ncode*/"  -> 0011..1     Test 3
+
+2. Special cases:           "*//*code"        -> 00001..1    Test 4
+   (//,/* in the middle)    "/a//code"        -> 00001..1    Test 5
+                            "/a/*code*/"      -> 00001..1    Test 6

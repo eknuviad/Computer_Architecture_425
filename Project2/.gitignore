@@ -5,3 +5,8 @@ work/
 db/
 c5_pin_model_dump.txt
 vsim.wlf
+Group10_Cache.qpf
+cache.qsf
+cache_tb.vhd.bak
+memory.vhd.bak
+memory_tb.vhd.bak

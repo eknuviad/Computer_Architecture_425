@@ -1,0 +1,7 @@
+incremental_db/
+output_files/
+simulation/
+work/
+db/
+c5_pin_model_dump.txt
+vsim.wlf

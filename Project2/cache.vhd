@@ -73,7 +73,6 @@ begin
 	data_offset := to_integer(unsigned(s_addr(1 downto 0))); --+1 ??
 	
 	case state is
-	
 		when c_begin =>
 			s_waitrequest <= '1';
 			if s_read = '1' then 
@@ -85,7 +84,6 @@ begin
 			end if;
 
 		when c_write =>
-			s_waitrequest <= '1';
 			-- only write if V = 1 and tag /= address requested and dirty bit is 0
 			if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7) and cache_storage(cache_index)(128) /= '1') then
 				cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1)) <= s_writedata;
@@ -97,48 +95,48 @@ begin
 			end if;
 			
 		when c_read =>
-		if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7)) then
-				s_readdata <= cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1));
-				s_waitrequest <= '0';
-				m_read <= '0';
-				m_write <= '0';
-				s_waitrequest <= '0';
-				block_count := 0;
-				state <= c_begin;			
-			elsif(cache_storage(cache_index)(128) = '1' and cache_storage(cache_index)(154) = '1') then --if tag is valid but also dirty
-				is_read := true;
-				state <= write_back;
-			else
-				is_read := true;
-				state <= memory_read;
-		end if;
+			if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7)) then
+					s_readdata <= cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1));
+					s_waitrequest <= '0';
+					m_read <= '0';
+					m_write <= '0';
+					s_waitrequest <= '0';
+					block_count := 0;
+					state <= c_begin;			
+				elsif(cache_storage(cache_index)(128) = '1' and cache_storage(cache_index)(154) = '1') then --if tag is valid but also dirty
+					is_read := true;
+					state <= write_back;
+				else
+					is_read := true;
+					state <= memory_read;
+			end if;
 			
 		when write_back =>
-		if(cache_storage(cache_index)(154) = '1') then --  write to memory if there is an occupant
-			if(m_waitrequest = '1' and block_count < 4) then
-				c_address := cache_storage(cache_index)(136 downto 129) & s_addr (6 downto 0);
-				m_addr <= to_integer(unsigned (c_address)) + block_count;
-				m_write <= '1';
-				m_read <= '0';
-				-- write to memory
-				m_writedata <= cache_storage(cache_index)(127 downto 0)((data_offset*8)+7+32*(data_offset-1) downto (data_offset*8)+32*(data_offset-1));
-				block_count := block_count + 1;
-				state <= write_back;
-			elsif(block_count = 4) then
-				block_count :=0;
-				cache_storage(cache_index)(154) <= '0';
-				cache_storage(cache_index)(128) <= '0';
-				state <= write_back;	
+			if(cache_storage(cache_index)(154) = '1') then --  write to memory if there is an occupant
+				if(m_waitrequest = '1' and block_count < 4) then
+					c_address := cache_storage(cache_index)(136 downto 129) & s_addr (6 downto 0);
+					m_addr <= to_integer(unsigned (c_address)) + block_count;
+					m_write <= '1';
+					m_read <= '0';
+					-- write to memory
+					m_writedata <= cache_storage(cache_index)(127 downto 0)((data_offset*8)+7+32*(data_offset-1) downto (data_offset*8)+32*(data_offset-1));
+					block_count := block_count + 1;
+					state <= write_back;
+				elsif(block_count = 4) then
+					block_count :=0;
+					cache_storage(cache_index)(154) <= '0';
+					cache_storage(cache_index)(128) <= '0';
+					state <= write_back;	
+				else
+					m_write <= '0';
+					state <= write_back; --wait due to m_waitrequest
+				end if;	
 			else
+				m_addr <= to_integer(unsigned(s_addr(14 downto 0))) + block_count;
+				m_read <= '1';
 				m_write <= '0';
-				state <= write_back; --wait due to m_waitrequest
-			end if;	
-		else
-			m_addr <= to_integer(unsigned(s_addr(14 downto 0))) + block_count;
-			m_read <= '1';
-			m_write <= '0';
-			state <= memory_read;	
-		end if;
+				state <= memory_read;	
+			end if;
 		
 		when memory_read =>
 			if (m_waitrequest = '0' and block_count < 4) then
@@ -164,7 +162,7 @@ begin
 			end if;
 		
 		when others =>
-		NULL;
+			NULL;
 		
 	end case;
 	end if;

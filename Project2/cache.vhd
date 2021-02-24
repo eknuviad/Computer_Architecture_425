@@ -97,21 +97,22 @@ begin
 			end if;
 			
 		when c_read =>
---			if(.....) then
---				s_readdata <= cache_structure(block_index)(127 downto 0)((word_offset * 32) - 1 downto 32*(word_offset - 1));
---				m_read <= '0';
---				m_write <= '0';
---				s_waitrequest <= '0';
---				-- Reset the word counter
---				block_count := 0;
---				-- Move back to the initial state to wait for the next operation
---				state <= c_begin;
---			
---			elsif(....) then
---			
---			else
---				is_read := true;
---			
+		if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7)) then
+				s_readdata <= cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1));
+				s_waitrequest <= '0';
+				m_read <= '0';
+				m_write <= '0';
+				s_waitrequest <= '0';
+				block_count := 0;
+				state <= c_begin;			
+			elsif(cache_storage(cache_index)(128) = '1' and cache_storage(cache_index)(154) = '1') then --if tag is valid but also dirty
+				is_read := true;
+				state <= write_back;
+			else
+				is_read := true;
+				state <= memory_read;
+		end if;
+			
 		when write_back =>
 		if(cache_storage(cache_index)(154) = '1') then --  write to memory if there is an occupant
 			if(m_waitrequest = '1' and block_count < 4) then
@@ -120,7 +121,7 @@ begin
 				m_write <= '1';
 				m_read <= '0';
 				-- write to memory
-				m_writedata <= cache_storage(cache_index)(127 downto 0)((data_offset * 8) + 7 + 32*(data_offset - 1) downto (data_offset * 8) + 32*(data_offset - 1));
+				m_writedata <= cache_storage(cache_index)(127 downto 0)((data_offset*8)+7+32*(data_offset-1) downto (data_offset*8)+32*(data_offset-1));
 				block_count := block_count + 1;
 				state <= write_back;
 			elsif(block_count = 4) then
@@ -142,7 +143,7 @@ begin
 		when memory_read =>
 			if (m_waitrequest = '0' and block_count < 4) then
 				-- Read in data to cache
-				cache_storage(cache_index)(127 downto 0)((data_offset * 8) + 7 + 32*(data_offset - 1) downto (data_offset * 8) + 32*(data_offset - 1)) <= m_readdata;
+				cache_storage(cache_index)(127 downto 0)((data_offset*8)+7+32*(data_offset-1) downto (data_offset*8)+32*(data_offset-1)) <= m_readdata;
 				block_count := block_count + 1;
 				m_read <= '0';
 				state <= memory_read;	

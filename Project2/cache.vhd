@@ -35,15 +35,16 @@ type t_state is (c_begin, c_write, c_read, write_back, memory_read);
 signal state: t_state;
 
 -- processor-cache addressing:
--- 4 words per block = 2 bits for offset
--- cache_data_storage_bit/block_bit :
--- = 4096/128 = 32 blocks = 5 bits for cache_block addressing
--- TAG = 32 - (2 + 5) = 25 bits
+-- 2 bits for block offset
+-- 5 bits for cache_block addressing
+-- 25 bits for TAG. 
+-- (Review Report for details)
 
 --- V = (154) 
 --- TAG = (153 down to 129)
 --- D = (128) 
 --- DATA = (127 downto 0)
+
 -- | V  |  TAG   |  D  |  DATA |
 -- 1bit + 25bit + 1bit + 128bits
 type cache_storage_def is array (0 to 31) of std_logic_vector (154 downto 0);
@@ -56,9 +57,11 @@ shared variable data_offset: INTEGER := 0;
 begin
 
 -- make circuits here
-process (clock, reset, state, s_read, s_write)
+process (clock, reset, state, s_read, s_write, m_waitrequest)
 
 -- declare other internal variables
+variable block_count: INTEGER := 0;
+variable c_address: std_logic_vector (14 downto 0); 
 
 begin
 
@@ -67,42 +70,97 @@ begin
 	elsif (rising_edge(clock)) then
 	
 	cache_index := to_integer(unsigned(s_addr(6 downto 2)));
-	data_offset := to_integer(unsigned(s_addr(1 downto 0)));
+	data_offset := to_integer(unsigned(s_addr(1 downto 0))); --+1 ??
 	
 	case state is
+	
 		when c_begin =>
 			s_waitrequest <= '1';
 			if s_read = '1' then 
 				state <= c_read;
-			
 			elsif s_write = '1' then
 				state <= c_write;
-		
 			else
 				state <= c_begin;
 			end if;
 
 		when c_write =>
 			s_waitrequest <= '1';
+			-- only write if V = 1 and tag /= address requested and dirty bit is 0
 			if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7) and cache_storage(cache_index)(128) /= '1') then
 				cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1)) <= s_writedata;
 				s_waitrequest <= '0';
 				state <= c_begin;
 			else
+				is_read := false;
 				state <= write_back;
 			end if;
 			
 		when c_read =>
-		
+--			if(.....) then
+--				s_readdata <= cache_structure(block_index)(127 downto 0)((word_offset * 32) - 1 downto 32*(word_offset - 1));
+--				m_read <= '0';
+--				m_write <= '0';
+--				s_waitrequest <= '0';
+--				-- Reset the word counter
+--				block_count := 0;
+--				-- Move back to the initial state to wait for the next operation
+--				state <= c_begin;
+--			
+--			elsif(....) then
+--			
+--			else
+--				is_read := true;
+--			
 		when write_back =>
-		-- check if there is an occupant (valid = 0 or not), 
-		-- if valid is 1 send to memory, change valid bit to 0, if yes send to memory and 
-		-- bring back from memory reading 
-		-- set valid tag to 1
-		-- set dirty bit to zero
-		-- switch to previous state using isread boolean
+		if(cache_storage(cache_index)(154) = '1') then --  write to memory if there is an occupant
+			if(m_waitrequest = '1' and block_count < 4) then
+				c_address := cache_storage(cache_index)(136 downto 129) & s_addr (6 downto 0);
+				m_addr <= to_integer(unsigned (c_address)) + block_count;
+				m_write <= '1';
+				m_read <= '0';
+				-- write to memory
+				m_writedata <= cache_storage(cache_index)(127 downto 0)((data_offset * 8) + 7 + 32*(data_offset - 1) downto (data_offset * 8) + 32*(data_offset - 1));
+				block_count := block_count + 1;
+				state <= write_back;
+			elsif(block_count = 4) then
+				block_count :=0;
+				cache_storage(cache_index)(154) <= '0';
+				cache_storage(cache_index)(128) <= '0';
+				state <= write_back;	
+			else
+				m_write <= '0';
+				state <= write_back; --wait due to m_waitrequest
+			end if;	
+		else
+			m_addr <= to_integer(unsigned(s_addr(14 downto 0))) + block_count;
+			m_read <= '1';
+			m_write <= '0';
+			state <= memory_read;	
+		end if;
 		
 		when memory_read =>
+			if (m_waitrequest = '0' and block_count < 4) then
+				-- Read in data to cache
+				cache_storage(cache_index)(127 downto 0)((data_offset * 8) + 7 + 32*(data_offset - 1) downto (data_offset * 8) + 32*(data_offset - 1)) <= m_readdata;
+				block_count := block_count + 1;
+				m_read <= '0';
+				state <= memory_read;	
+			elsif(is_read = false and block_count = 4) then
+				-- Set valid bit to 1, dirty bit to 0
+				cache_storage(cache_index)(154) <= '1';
+				cache_storage(cache_index)(152 downto 128) <= s_addr (31 downto 7);
+				cache_storage(cache_index)(128) <= '0';
+				state <= c_write;
+			elsif(is_read = true and block_count = 4) then
+				-- Set valid bit to 1, dirty bit to 0
+				cache_storage(cache_index)(154) <= '1';
+				cache_storage(cache_index)(152 downto 128) <= s_addr (31 downto 7);
+				cache_storage(cache_index)(128) <= '0';
+				state <= c_read;
+			else
+				state <= memory_read; --wait due to m_waitrequest
+			end if;
 		
 		when others =>
 		NULL;

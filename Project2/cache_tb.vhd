@@ -68,6 +68,12 @@ signal m_write : std_logic;
 signal m_writedata : std_logic_vector (7 downto 0);
 signal m_waitrequest : std_logic; 
 
+-- the following values will be used to in the following tests 
+constant VAL1 : std_logic_vector (31 downto 0) := "01010101010101010101010101010101";
+constant VAL2 : std_logic_vector (31 downto 0) := "00000000000000000000000000000001";
+constant VAL3 : std_logic_vector (31 downto 0) := X"0F0E0D0C";	
+constant VAL4 : std_logic_vector (31 downto 0) := X"FFFEFDFC"; 
+
 begin
 
 -- Connect the components which we instantiated above to their
@@ -115,7 +121,77 @@ end process;
 test_process : process
 begin
 
--- put your tests here
+-- TEST1:  
+
+REPORT "TEST 1: Write Miss and Read Hit";
+
+s_addr <= (others => '0'); -- address 0000...00
+s_writedata <= VAL1; -- write know data to cache and main memory
+s_write <= '1'; 
+s_read <= '0'; -- write not read
+wait until rising_edge(s_waitrequest);
+s_write <= '0'; 
+s_read <= '1'; -- now read
+wait until rising_edge(s_waitrequest);
+assert s_readdata = VAL1 report "Unsuccessful Write" severity error;
+
+REPORT "End of Test 1";
+
+
+-- Test 2
+REPORT "TEST 2: Write Hit and Read Hit";
+
+s_writedata <= VAL2; -- write know data to cache and main memory
+s_write <=  '1'; 
+s_read <= '0'; -- write not read
+wait until rising_edge(s_waitrequest);
+s_write <= '0'; 
+s_read <= '1'; -- now read
+wait until rising_edge(s_waitrequest);
+assert s_readdata = VAL2 report "TEST 2 FAILED" severity error;
+
+REPORT "END OF TEST 2";
+
+
+--Test 3
+REPORT "TEST 3: Read Miss (at offset) + Writeback";
+
+s_addr <= "00000000000000000000001000001111"; -- address with different tag, same index to trigger writeback
+s_write <=  '0'; s_read <= '1'; -- read
+wait until rising_edge(s_waitrequest);
+assert s_readdata = VAL3 report "TEST 3 FAILED on READ MISS 1" severity error; -- data should be read from 0...01000001111
+-- block in line 0 should be recently read block; now read from address 0 again to test writeback success
+s_addr <= (others => '0');
+s_write <= '0'; s_read <= '1'; -- read
+wait until rising_edge(s_waitrequest);
+assert s_readdata = VAL2 report "TEST 3 FAILED on READ MISS 2" severity error;	-- should read old value fetched from memory
+
+REPORT "END OF Test4";
+
+
+-- Test 4
+
+REPORT "TEST 4: Write/Read at different index";
+-- verify read is correct for different index and offset
+s_addr <= "00000000000000000000001111111111";
+s_write <=  '0'; s_read <= '1'; -- read
+wait until rising_edge(s_waitrequest);
+assert s_readdata = VAL4 report "TEST 4 FAILED on READ" severity error;
+s_writedata <= VAL1;
+s_write <=  '1'; s_read <= '0'; -- write
+wait until rising_edge(s_waitrequest);
+-- verify correctly written data at offset with read
+s_write <=  '0'; s_read <= '1'; -- read
+wait until rising_edge(s_waitrequest);
+assert s_readdata = VAL1 report "TEST 4 FAILED on WRITE" severity error;
+
+REPORT "END OF Test 4";
+
+REPORT "TESTS COMPLETE" severity failure;
+
+wait;
+
+
 	
 end process;
 	

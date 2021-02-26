@@ -27,145 +27,181 @@ port(
 );
 end cache;
 
+
+-- Note: s_waitrequest asserted by default
+
+-- Read procedure
+-- 1. When s_read is high, cache reads s_addr and locates associated block (direct-mapped)
+-- 2. Cache checks if block is valid and tag matches. if not (miss), c_fetch correct one
+-- 3. Cache sets s_readdata to requested word
+-- 4. Cache deasserts s_waitrequest for an entire clock cycle, then reasserts it
+
+-- Write procedure
+-- 1. When s_write is high, cache reads s_addr and locates associated block (direct-mapped)
+-- 2. Cache checks if block is valid and tag matches. If not (miss), c_fetch correct one
+-- 3. Caches writes word to correct offset in block, dirty bit set to 1
+-- 4. Cache deasserts s_waitrequest for an entire clock cycle, then reasserts it
+
+-- Block c_fetching procedure
+-- 1. If block to replace in cache is valid and dirty, first perform write_back
+-- 2. Cache sets m_addr to first word in block and asserts s_read
+--	3. Cache waits for next rising edge of m_waitrequest, then copies m_readdata to word in block
+--	4. Above two steps repeated for other three words in block
+--	5. Cache sets block's valid bit to 1 and dirty bit to 0
+
+-- write_back procedure
+--	1. Cache sets m_addr to address of word of block and m_writedata to first word of block, then asserts m_write
+--	2. Caches waits for next rising edge of m_waitrequest
+--	3. Above two steps repeated for other three words in block
+
+
 architecture arch of cache is
 
--- declare signals here
+--cache states
+type cache_state is (c_idle, c_fetch, write_back, read_write);
+signal state: cache_state;
 
-type t_state is (c_begin, c_write, c_read, write_back, memory_read);
-signal state: t_state;
-
--- processor-cache addressing:
--- 2 bits for block offset
--- 5 bits for cache_block addressing
--- 25 bits for TAG. 
--- (Review Report for details)
-
---- V = (154) 
---- TAG = (153 down to 129)
---- D = (128) 
---- DATA = (127 downto 0)
+-- types
 
 -- | V  |  TAG   |  D  |  DATA |
 -- 1bit + 25bit + 1bit + 128bits
-type cache_storage_def is array (0 to 31) of std_logic_vector (154 downto 0);
-signal cache_storage: cache_storage_def;
+type cache_struct is
+	record
+		valid: std_logic;
+		tag : std_logic_vector (22 downto 0);
+		dirty: std_logic;
+		data : std_logic_vector (127 downto 0);
+	end record;
+type cache_struct_array is array (31 downto 0) of cache_struct;
 
-shared variable is_read: boolean := false;
-shared variable cache_index: INTEGER;
-shared variable data_offset: INTEGER := 0;
+-- constants
+constant init_block : cache_struct := (valid => '0',tag => (others => '0'),dirty => '0',data => (others => '0'));
+
+-- signals
+signal cache_storage : cache_struct_array := (others => init_block);
+
+
+
+--type cache_storage_def is array (0 to 31) of std_logic_vector (154 downto 0);
+--signal cache_storage: cache_storage_def;
+
+signal s_waitrequest_reg : std_logic := '1';
+signal s_addr_reg : std_logic_vector (31 downto 0) := (others => '0');
+signal s_readdata_reg : std_logic_vector (31 downto 0) := (others => '0');
+signal m_addr_reg : integer := 0;
+signal m_read_reg : std_logic := '0';
+signal m_write_reg : std_logic := '0';
+signal m_writedata_reg : std_logic_vector (7 downto 0) := (others => '0');
+
+signal tag : std_logic_vector (22 downto 0);
+signal index, offset, addr_int, wb_addr_int : integer;
+
+signal byte_count : integer := 0;
+
 
 begin
-
--- make circuits here
-process (clock, reset, state, s_read, s_write, m_waitrequest)
-
--- declare other internal variables
-variable block_count: INTEGER := 0;
-variable c_address: std_logic_vector (14 downto 0); 
-
-begin
-
-	if (reset = '1') then
-		state <= c_begin;
-	elsif (rising_edge(clock)) then
 	
-	cache_index := to_integer(unsigned(s_addr(6 downto 2)));
-	data_offset := to_integer(unsigned(s_addr(1 downto 0))); --+1 ??
+	-- Output to processor
+	s_waitrequest <= s_waitrequest_reg;
+	s_readdata <= s_readdata_reg;
+		
+	-- Output to cache_storageory
+	m_addr <= m_addr_reg;
+	m_read <= m_read_reg;
+	m_write <= m_write_reg;
+	m_writedata <= m_writedata_reg;
+
 	
-	case state is
-		when c_begin =>
-			s_waitrequest <= '1';
-			if s_read = '1' then 
-				state <= c_read;
-			elsif s_write = '1' then
-				state <= c_write;
-			else
-				state <= c_begin;
-			end if;
 
-		when c_write =>
-			-- only write if V = 1 and tag /= address requested and dirty bit is 0
-			if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7) and cache_storage(cache_index)(128) /= '1') then
-				cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1)) <= s_writedata;
-				s_waitrequest <= '0';
-				state <= c_begin;
-			else
-				is_read := false;
-				state <= write_back;
-			end if;
-			
-		when c_read =>
-			if(cache_storage(cache_index)(154) = '1' and cache_storage(cache_index)(153 downto 129) = s_addr(31 downto 7)) then
-					s_readdata <= cache_storage(cache_index)(127 downto 0)((data_offset*32)-1 downto 32*(data_offset-1));
-					s_waitrequest <= '0';
-					m_read <= '0';
-					m_write <= '0';
-					s_waitrequest <= '0';
-					block_count := 0;
-					state <= c_begin;			
-				elsif(cache_storage(cache_index)(128) = '1' and cache_storage(cache_index)(154) = '1') then --if tag is valid but also dirty
-					is_read := true;
-					state <= write_back;
-				else
-					is_read := true;
-					state <= memory_read;
-			end if;
-			
-		when write_back =>
-			if(cache_storage(cache_index)(154) = '1') then --  write to memory if there is an occupant
-				if(m_waitrequest = '1' and block_count < 4) then
-					c_address := cache_storage(cache_index)(136 downto 129) & s_addr (6 downto 0);
-					m_addr <= to_integer(unsigned (c_address)) + block_count;
-					m_write <= '1';
-					m_read <= '0';
-					-- write to memory
-					m_writedata <= cache_storage(cache_index)(127 downto 0)((data_offset*8)+7+32*(data_offset-1) downto (data_offset*8)+32*(data_offset-1));
-					block_count := block_count + 1;
-					state <= write_back;
-				elsif(block_count = 4) then
-					block_count :=0;
-					cache_storage(cache_index)(154) <= '0';
-					cache_storage(cache_index)(128) <= '0';
-					state <= write_back;	
-				else
-					m_write <= '0';
-					state <= write_back; --wait due to m_waitrequest
-				end if;	
-			else
-				m_addr <= to_integer(unsigned(s_addr(14 downto 0))) + block_count;
-				m_read <= '1';
-				m_write <= '0';
-				state <= memory_read;	
-			end if;
-		
-		when memory_read =>
-			if (m_waitrequest = '0' and block_count < 4) then
-				-- Read in data to cache
-				cache_storage(cache_index)(127 downto 0)((data_offset*8)+7+32*(data_offset-1) downto (data_offset*8)+32*(data_offset-1)) <= m_readdata;
-				block_count := block_count + 1;
-				m_read <= '0';
-				state <= memory_read;	
-			elsif(is_read = false and block_count = 4) then
-				-- Set valid bit to 1, dirty bit to 0
-				cache_storage(cache_index)(154) <= '1';
-				cache_storage(cache_index)(152 downto 128) <= s_addr (31 downto 7);
-				cache_storage(cache_index)(128) <= '0';
-				state <= c_write;
-			elsif(is_read = true and block_count = 4) then
-				-- Set valid bit to 1, dirty bit to 0
-				cache_storage(cache_index)(154) <= '1';
-				cache_storage(cache_index)(152 downto 128) <= s_addr (31 downto 7);
-				cache_storage(cache_index)(128) <= '0';
-				state <= c_read;
-			else
-				state <= memory_read; --wait due to m_waitrequest
-			end if;
-		
-		when others =>
-			NULL;
-		
-	end case;
-	end if;
+	-- clock and reset sensitive process
+	process (clock, reset, state, tag, index, offset, addr_int, wb_addr_int, s_addr)
+	
 
-end process;
+	variable index_v : integer;
+	
+	begin
+		
+		index_v := to_integer(unsigned('0' & s_addr(8 downto 4)));
+		index <= index_v;
+		offset <= to_integer(unsigned('0' & s_addr(3 downto 2)));
+		addr_int <= to_integer(unsigned('0' & s_addr(31 downto 4) & "0000"));
+		wb_addr_int <= to_integer(unsigned('0' & cache_storage(index_v).tag & s_addr(8 downto 4) & "0000"));
+		
+		
+		if (reset = '1') then
+			state <= c_idle;
+			s_waitrequest_reg <= '0';	-- wait_request set to 0 to prevent master from waiting forever if reset during request
+		else
+			if (clock'event and clock = '1') then
+				case state is
+					when c_idle =>
+						if (s_read = '1' or s_write = '1') then
+							s_addr_reg <= s_addr;
+							if (cache_storage(index).valid = '1' and cache_storage(index).tag = s_addr(31 downto 9)) then
+								state <= read_write;
+							elsif (cache_storage(index).valid = '1' and cache_storage(index).dirty = '1') then
+								state <= write_back;
+								byte_count <= 0;
+								m_addr_reg <= wb_addr_int;
+								m_writedata_reg <= cache_storage(index).data (7 downto 0);
+								m_write_reg <= '1';
+							else
+								state <= c_fetch;
+								byte_count <= 0;
+								m_addr_reg <= addr_int;
+								m_read_reg <= '1';
+							end if;
+						end if;
+						
+					when write_back =>
+						if (m_waitrequest = '0') then
+							m_write_reg <= '0';
+							if (byte_count = 15) then
+								state <= c_fetch;
+								byte_count <= 0;
+								m_addr_reg <= addr_int;
+								m_read_reg <= '1';
+							end if;
+						elsif (m_write_reg = '0') then
+							byte_count <= byte_count + 1;
+							m_addr_reg <= m_addr_reg + 1;
+							m_writedata_reg <= cache_storage(index).data ((byte_count + 1) * 8 + 7 downto (byte_count + 1) * 8);
+							m_write_reg <= '1';
+						end if;
+						
+					when c_fetch =>
+						if (m_waitrequest = '0') then
+							cache_storage(index).data (byte_count * 8 + 7 downto byte_count * 8) <= m_readdata;
+							m_read_reg <= '0';
+							if (byte_count = 15) then
+								state <= read_write;
+								cache_storage(index).tag <= tag;
+								cache_storage(index).valid <= '1';
+								cache_storage(index).dirty <= '0';
+							end if;
+						elsif (m_read_reg = '0') then
+							byte_count <= byte_count + 1;
+							m_addr_reg <= m_addr_reg + 1;
+							m_read_reg <= '1';
+						end if;
+						
+					when read_write =>
+						if (s_waitrequest_reg = '1') then
+							if (s_read = '1') then
+								s_readdata_reg <= cache_storage(index).data (offset * 32 + 31 downto offset * 32);
+							elsif (s_write = '1') then
+								cache_storage(index).data (offset * 32 + 31 downto offset * 32) <= s_writedata;
+								cache_storage(index).dirty <= '1';
+							end if;
+							s_waitrequest_reg <= '0';
+						else
+							state <= c_idle;
+							s_waitrequest_reg <= '1';
+						end if;
+						
+				end case;
+			end if;
+		end if;
+	end process;
+	
 end arch;

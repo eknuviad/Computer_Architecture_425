@@ -39,7 +39,7 @@ signal state: cache_state;
 type cache_struct is
 	record
 		valid: std_logic;
-		tag : std_logic_vector (24 downto 0);
+		tag : std_logic_vector (7 downto 0);
 		dirty: std_logic;
 		data : std_logic_vector (127 downto 0);
 	end record;
@@ -57,7 +57,7 @@ signal m_addr_signal: integer := 0;
 signal m_read_signal: std_logic := '0';
 signal m_write_signal : std_logic := '0';
 signal m_writedata_signal : std_logic_vector (7 downto 0) := (others => '0');
-signal tag : std_logic_vector (24 downto 0);
+signal tag : std_logic_vector (7 downto 0);
 signal index, offset, address, wb_address : integer;
 signal byte_count : integer := 0;
 
@@ -91,13 +91,13 @@ begin
 			if (rising_edge(clock)) then
 				case state is
 					when c_idle =>
-						if (s_read = '1' and cache_storage(index).valid = '1' and cache_storage(index).tag = s_addr(31 downto 9)) then
+						if (s_read = '1' and cache_storage(index).valid = '1' and cache_storage(index).tag = s_addr(16 downto 9)) then
 							s_addr_signal<= s_addr;
 							state <= c_read;
-						elsif(s_write = '1' and cache_storage(index).valid = '1' and cache_storage(index).tag = s_addr(31 downto 9)) then
+						elsif(s_write = '1' and cache_storage(index).valid = '1' and cache_storage(index).tag = s_addr(16 downto 9)) then
 							s_addr_signal<= s_addr;
 							state <= c_write;
-						elsif (cache_storage(index).valid = '1' and cache_storage(index).dirty = '1' and cache_storage(index).tag /= s_addr(31 downto 9)) then
+						elsif (cache_storage(index).valid = '1' and cache_storage(index).dirty = '1' and cache_storage(index).tag /= s_addr(16 downto 9)) then
 							state <= write_back;
 							byte_count <= 0;
 							m_addr_signal<= wb_address;

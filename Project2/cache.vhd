@@ -97,7 +97,7 @@ begin
 						elsif(s_write = '1' and cache_storage(index).valid = '1' and cache_storage(index).tag = s_addr(31 downto 9)) then
 							s_addr_signal<= s_addr;
 							state <= c_write;
-						elsif (cache_storage(index).valid = '1' and cache_storage(index).dirty = '1') then
+						elsif (cache_storage(index).valid = '1' and cache_storage(index).dirty = '1' and cache_storage(index).tag /= s_addr(31 downto 9)) then
 							state <= write_back;
 							byte_count <= 0;
 							m_addr_signal<= wb_address;

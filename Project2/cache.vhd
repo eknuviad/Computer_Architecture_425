@@ -35,7 +35,7 @@ type cache_state is (c_idle, c_read, c_write, m_fetch, write_back);
 signal state: cache_state;
 
 -- | V  |  TAG   |  D  |  DATA |
--- 1bit + 25bit + 1bit + 128bits = 155
+-- 1bit + 8bit + 1bit + 128bits = 138
 type cache_struct is
 	record
 		valid: std_logic;

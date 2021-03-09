@@ -121,9 +121,11 @@ end process;
 test_process : process
 begin
 
+
+
 -- TEST1:  
 
-REPORT "TEST 1: Write Miss and Read Hit";
+REPORT "TEST 1: Write Miss and Read Hit"; --write- clean miss invalid, read -clean hit valid
 
 s_addr <= (others => '0'); -- address 0000...00
 s_writedata <= VAL1; -- write know data to cache and main memory
@@ -139,7 +141,7 @@ REPORT "End of Test 1";
 
 
 -- Test 2
-REPORT "TEST 2: Write Hit and Read Hit";
+REPORT "TEST 2: Write Hit and Read Hit"; --write: clean, hit, valid, read: dirty, hit, valid
 
 s_writedata <= VAL2; -- write know data to cache and main memory
 s_write <=  '1'; 
@@ -152,9 +154,8 @@ assert s_readdata = VAL2 report "TEST 2 FAILED" severity error;
 
 REPORT "END OF TEST 2";
 
-
---Test 3
-REPORT "TEST 3: Read Miss (at offset) + Writeback";
+----Test 3
+REPORT "TEST 3: Read Miss (at offset) + Writeback"; -- read: dirty, miss, valid, read: clean, miss, valid
 
 s_addr <= "00000000000000000000001000001111"; -- address with different tag, same index to trigger writeback
 s_write <=  '0'; s_read <= '1'; -- read
@@ -166,12 +167,10 @@ s_write <= '0'; s_read <= '1'; -- read
 wait until rising_edge(s_waitrequest);
 assert s_readdata = VAL2 report "TEST 3 FAILED on READ MISS 2" severity error;	-- should read old value fetched from memory
 
-REPORT "END OF Test4";
+REPORT "END OF Test3";
 
-
--- Test 4
-
-REPORT "TEST 4: Write/Read at different index";
+---- Test 4
+REPORT "TEST 4: Write/Read at different index"; --read: clean, miss, invalid, write: clean, valid, hit, read: dirty, valid, miss
 -- verify read is correct for different index and offset
 s_addr <= "00000000000000000000001111111111";
 s_write <=  '0'; s_read <= '1'; -- read
@@ -186,6 +185,26 @@ wait until rising_edge(s_waitrequest);
 assert s_readdata = VAL1 report "TEST 4 FAILED on WRITE" severity error;
 
 REPORT "END OF Test 4";
+
+
+--- Test 5
+REPORT "TEST 5: Write Miss (at offset) + Writeback"; --write: clean, miss, valid, write: dirty, hit, valid
+
+s_addr <= "00000000000000000000001000001111"; -- address with different tag, same index to trigger writeback
+s_writedata <= VAL3; 
+s_write <=  '1'; s_read <= '0'; -- write
+wait until rising_edge(s_waitrequest);
+s_write <= '0'; 
+s_read <= '1'; -- now read
+assert s_readdata = VAL3 report "TEST 5 FAILED on READ MISS 1" severity error;
+s_writedata <= VAL4; 
+s_write <= '1'; s_read <= '0'; -- read
+wait until rising_edge(s_waitrequest);
+s_write <= '0'; 
+s_read <= '1'; -- now read
+assert s_readdata = VAL4 report "TEST 5 FAILED on READ MISS 2" severity error;	
+
+REPORT "END OF Test5";
 
 REPORT "TESTS COMPLETE" severity failure;
 

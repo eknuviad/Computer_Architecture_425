@@ -157,7 +157,7 @@ REPORT "END OF TEST 2";
 ----Test 3
 REPORT "TEST 3: Read Miss (at offset) + Writeback"; -- read: dirty, miss, valid, read: clean, miss, valid
 
-s_addr <= "00000000000000000000001000001111"; -- address with different tag, same index to trigger writeback
+s_addr <= "00000000000000000000001000001100"; -- address with different tag, same index to trigger writeback
 s_write <=  '0'; s_read <= '1'; -- read
 wait until rising_edge(s_waitrequest);
 assert s_readdata = VAL3 report "TEST 3 FAILED on READ MISS 1" severity error; -- data should be read from 0...01000001111
@@ -172,7 +172,7 @@ REPORT "END OF Test3";
 ---- Test 4
 REPORT "TEST 4: Write/Read at different index"; --read: clean, miss, invalid, write: clean, valid, hit, read: dirty, valid, miss
 -- verify read is correct for different index and offset
-s_addr <= "00000000000000000000001111111111";
+s_addr <= "00000000000000000000001111111100";
 s_write <=  '0'; s_read <= '1'; -- read
 wait until rising_edge(s_waitrequest);
 assert s_readdata = VAL4 report "TEST 4 FAILED on READ" severity error;
@@ -190,7 +190,7 @@ REPORT "END OF Test 4";
 --- Test 5
 REPORT "TEST 5: Write Miss (at offset) + Writeback"; --write: clean, miss, valid, write: dirty, hit, valid
 
-s_addr <= "00000000000000000000001000001111"; -- address with different tag, same index to trigger writeback
+s_addr <= "00000000000000000000001000001100"; -- address with different tag, same index to trigger writeback
 s_writedata <= VAL3; 
 s_write <=  '1'; s_read <= '0'; -- write
 wait until rising_edge(s_waitrequest);
